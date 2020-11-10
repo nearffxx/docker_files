@@ -1,0 +1,108 @@
+FROM ubuntu:18.04
+
+ENV DEBIAN_FRONTEND noninteractive
+
+# locales
+RUN apt update \
+    && apt -y install locales \
+    && apt clean
+
+RUN locale-gen en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
+
+# base tools
+RUN apt update \
+    && apt -y install software-properties-common \
+    && apt-add-repository ppa:neovim-ppa/stable \
+    && apt clean
+
+RUN apt update \
+    && apt -y install sudo iproute2 htop tmux neovim \
+    && apt -y install patchelf strace ltrace \
+    && apt -y install git netcat socat wget curl iputils-ping iputils-tracepath \
+    && apt -y install python-pip python-dev \
+    && apt -y install python3-pip python3-dev \
+    && python -m pip install --upgrade pip \
+    && python3 -m pip install --upgrade pip \
+    && apt clean
+
+RUN python2 -m pip install ipython
+
+RUN python3 -m pip install ipython
+
+# apt-file
+RUN apt update \
+    && apt -y install apt-file \
+    && apt-file update \
+    && apt clean
+
+# build-essential multilib
+RUN apt update \
+    && apt -y install build-essential gcc-multilib g++-multilib \
+    && apt clean
+
+# libc6-dbg
+RUN dpkg --add-architecture i386 \
+    && apt update \
+    && apt -y install libc6-dbg libc6-dbg:i386 glibc-source \
+    && apt clean \
+    && tar -C /usr/src/glibc/ -xvf /usr/src/glibc/glibc-*.tar.xz \
+    && rm /usr/src/glibc/glibc-*.tar.xz
+
+# get tmux from source
+RUN apt update \
+    && apt -y install libevent-dev libncurses-dev \
+    && apt clean
+
+# pwndbg
+RUN git clone https://github.com/pwndbg/pwndbg \
+    && cd pwndbg \
+    && ./setup.sh \
+    && rm -f /root/.gdbinit
+
+# Radare2
+RUN git clone --depth 1 https://github.com/radare/radare2 \
+    && cd radare2 \
+    && ./sys/install.sh
+
+# pwntools
+RUN python2 -m pip install pwntools
+
+# Z3
+RUN python3 -m pip install z3-solver
+
+# arm_now
+RUN python3 -m pip install arm_now
+
+# one_dadget
+RUN apt update \
+    && apt -y install ruby-full \
+    && apt clean
+
+RUN gem install one_gadget
+
+# qemu + multiarch
+RUN apt update \
+    && apt -y install e2tools qemu gdb-multiarch \
+    && apt clean
+
+# customizations
+ADD tmux.conf /etc/tmux.conf
+
+ADD gdb /gdb
+
+ADD exp.py /exp.py
+
+ADD exec-wrapper.py /exec-wrapper.py
+
+ADD ld-linux-x86-64.so.2 /ld-linux-x86-64.so.2
+
+ADD libc.so.6 /libc.so.6
+# work env
+WORKDIR /mnt
+
+#ENTRYPOINT ["bash", "-c"]
+#CMD ["bash"]
+
